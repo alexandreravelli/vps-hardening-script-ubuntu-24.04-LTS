@@ -3,23 +3,26 @@
 
 set -e
 
-NEW_USER="prod-dokploy"
-LOG_FILE="/var/log/vps_setup.log"
+# Load banner functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/banner.sh"
 
-# Colors for better readability
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# Show check banner
+show_check_banner
+
+# Read the username from the file created by create_user.sh
+if [ -f /tmp/new_user_name.txt ]; then
+    NEW_USER=$(cat /tmp/new_user_name.txt)
+else
+    NEW_USER="prod-dokploy"  # Fallback to default
+fi
+LOG_FILE="/var/log/vps_setup.log"
 
 # Counters
 ISSUES=0
 WARNINGS=0
 
-echo "=== VPS SYSTEM HEALTH CHECK ==="
 echo "$(date): Running system health check" | sudo tee -a "$LOG_FILE"
-echo ""
 
 # Get public IP
 PUBLIC_IP=$(curl -s ifconfig.me 2>/dev/null || echo "Unable to detect")

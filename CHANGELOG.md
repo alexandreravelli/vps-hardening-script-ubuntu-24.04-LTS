@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2025-11-14
+
+### Added
+- **Custom username support**: Users can now choose their own username during installation (default: prod-dokploy)
+- **Manual SSH key configuration**: Users must provide their own SSH public key instead of copying from ubuntu user
+- **btop system monitor**: Automatic installation of btop for modern system resource monitoring
+- **SSH_KEY_HELP.md**: Comprehensive guide for finding and generating SSH keys
+- **Username persistence**: Username is saved in `/tmp/new_user_name.txt` for use across scripts
+
+### Changed
+- **create_user.sh**: Now prompts for username and requires SSH public key input
+- **All scripts**: Updated to read username from saved file instead of hardcoded value
+- **install.sh**: Updated prompts to reflect custom username support
+- **Documentation**: Updated README.md and GUIDE.md with new SSH key workflow
+
+### Improved
+- **Security**: Each user must provide their own SSH key, no automatic copying
+- **Flexibility**: Support for custom usernames instead of hardcoded "prod-dokploy"
+- **User experience**: Clear instructions and better prompts during installation
+- **Monitoring**: Added btop for better system resource visualization
+
 ## [2.1.0] - 2025-11-09
 
 ### Changed
@@ -65,3 +86,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Removed` for now removed features
 - `Fixed` for any bug fixes
 - `Security` for vulnerability fixes
+- `Improved` for enhancements to existing features

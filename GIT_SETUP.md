@@ -38,7 +38,7 @@ git branch -M main
 ### 5. Add Remote Origin
 
 ```bash
-git remote add origin git@github.com:ZenPloy-cloud/ubuntu-2404-production-deploy.git
+git remote add origin git@github.com:alexandreravelli/vps-hardening-script-ubuntu-24.04-LTS.git
 ```
 
 ### 6. Push to GitHub
@@ -67,7 +67,7 @@ git push
 
 After pushing, create a release on GitHub:
 
-1. Go to: https://github.com/ZenPloy-cloud/ubuntu-2404-production-deploy/releases/new
+1. Go to: https://github.com/alexandreravelli/vps-hardening-script-ubuntu-24.04-LTS/releases/new
 2. Tag version: `v2.1.0`
 3. Release title: `v2.1.0 - Production Ready`
 4. Description: Copy from CHANGELOG.md

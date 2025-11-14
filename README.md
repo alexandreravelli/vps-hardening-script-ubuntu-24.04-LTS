@@ -1,6 +1,6 @@
 # Secure VPS Configuration with Dokploy
 
-![Version](https://img.shields.io/badge/version-2.1.0-blue)
+![Version](https://img.shields.io/badge/version-2.2.0-blue)
 ![Status](https://img.shields.io/badge/status-production--ready-green)
 ![Ubuntu](https://img.shields.io/badge/ubuntu-24.04%20LTS-orange)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
@@ -9,13 +9,25 @@
 
 Automated scripts to configure an OVH VPS server with Dokploy and advanced security hardening.
 
-**🚀 Quick Start:** See [GUIDE.md](GUIDE.md) for simple installation steps!
+**🚀 Quick Start:** See [GUIDE.md](GUIDE.md) for simple installation steps!  
+**🔑 Need help with SSH keys?** See [SSH_KEY_HELP.md](SSH_KEY_HELP.md)  
+**📦 Repository:** https://github.com/alexandreravelli/vps-hardening-script-ubuntu-24.04-LTS
 
 ## 🚀 Installation Procedure
 
-#### Step 1: Setup SSH Key on VPS
+#### Step 1: Prepare Your SSH Key
 ```bash
-# As ubuntu user, generate SSH key
+# On your LOCAL machine, get your SSH public key
+cat ~/.ssh/id_ed25519.pub
+# or
+cat ~/.ssh/id_rsa.pub
+
+# Copy the entire output (starts with ssh-ed25519 or ssh-rsa)
+```
+
+#### Step 2: Setup SSH Key on VPS (for GitHub access)
+```bash
+# As ubuntu user, generate SSH key for GitHub
 ssh-keygen -t ed25519 -C "vps@dokploy"
 # Press Enter 3 times (accept defaults)
 
@@ -24,33 +36,37 @@ cat ~/.ssh/id_ed25519.pub
 # Copy the entire output
 ```
 
-#### Step 2: Add SSH Key to GitHub
+#### Step 3: Add SSH Key to GitHub
 1. Go to: https://github.com/settings/keys
 2. Click **"New SSH key"**
 3. Title: `VPS Dokploy`
 4. Paste your public key
 5. Click **"Add SSH key"**
 
-#### Step 3: Clone and Install
+#### Step 4: Clone and Install
 ```bash
 # Clone repository with SSH
-git clone git@github.com:ZenPloy-cloud/ubuntu-2404-production-deploy.git
-cd ubuntu-2404-production-deploy
+git clone git@github.com:alexandreravelli/vps-hardening-script-ubuntu-24.04-LTS.git
+cd vps-hardening-script-ubuntu-24.04-LTS
 chmod +x *.sh
 ./install.sh
 ```
 
-#### Step 4: Reconnect and Setup
+**During installation:**
+- You will be asked to choose a username (default: prod-dokploy)
+- You will need to paste your SSH public key (from Step 1)
+
+#### Step 5: Reconnect and Setup
 ```bash
 # Exit current session
 exit
 
-# Reconnect as prod-dokploy
-ssh prod-dokploy@<your_ip>
+# Reconnect with your new user
+ssh <your_username>@<your_ip>
 
 # Clone repository again (for prod-dokploy user)
-git clone git@github.com:ZenPloy-cloud/ubuntu-2404-production-deploy.git
-cd ubuntu-2404-production-deploy
+git clone git@github.com:alexandreravelli/vps-hardening-script-ubuntu-24.04-LTS.git
+cd vps-hardening-script-ubuntu-24.04-LTS
 chmod +x *.sh
 ./main_setup.sh
 ```
@@ -152,16 +168,21 @@ cat /tmp/ssh_connection_command.txt
 
 ### 📊 Monitoring & Verification
 - System health check script
+- **btop** - Modern system resource monitor
 - Centralized logging with rotation
 - Service status verification
 - Dokploy HTTP response check
 
 ### 🔧 Key Features
 - **One-command installation**: Quick and easy setup
+- **Beautiful terminal UI**: Professional ASCII art banners and color-coded output
+- **Custom username support**: Choose your own username during installation
+- **Manual SSH key configuration**: You provide your own SSH public key
 - **Enhanced error handling**: Detailed error messages with troubleshooting suggestions
 - **Simple architecture**: UFW for SSH, Docker for containers
 - **Dokploy verification**: HTTP response validation
 - **Docker daemon**: Production-ready configuration with log rotation
+- **System monitoring**: btop installed for beautiful resource monitoring
 - **Automatic backup**: Before each critical modification
 - **Port 3000 security**: Blocked after SSL setup (iptables persistent)
 - **Configuration template**: .env.example for easy customization
@@ -232,6 +253,9 @@ Scripts include automatic rollback function in case of errors during installatio
 ```bash
 # Complete system check
 ./system_check.sh
+
+# System resource monitor (interactive)
+btop
 
 # Configure Docker daemon (log rotation, storage, network cleanup)
 ./configure_docker.sh

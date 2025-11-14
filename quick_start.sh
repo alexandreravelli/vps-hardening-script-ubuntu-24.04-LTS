@@ -14,9 +14,16 @@ echo "  🚀 Dokploy VPS Setup - Quick Start"
 echo "=================================================================="
 echo ""
 
-# Check if running as prod-dokploy
-if [ "$(whoami)" != "prod-dokploy" ]; then
-    echo "❌ Error: This script must be run as user 'prod-dokploy'"
+# Read the username from the file created by create_user.sh
+if [ -f /tmp/new_user_name.txt ]; then
+    EXPECTED_USER=$(cat /tmp/new_user_name.txt)
+else
+    EXPECTED_USER="prod-dokploy"  # Fallback to default
+fi
+
+# Check if running as the correct user
+if [ "$(whoami)" != "$EXPECTED_USER" ]; then
+    echo "❌ Error: This script must be run as user '$EXPECTED_USER'"
     echo "Current user: $(whoami)"
     exit 1
 fi

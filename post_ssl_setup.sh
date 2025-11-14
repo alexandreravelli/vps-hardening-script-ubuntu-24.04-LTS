@@ -3,20 +3,30 @@
 
 set -e
 
-NEW_USER="prod-dokploy"
+# Load banner functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/banner.sh"
+
+# Show SSL banner
+show_ssl_banner
+
+# Read the username from the file created by create_user.sh
+if [ -f /tmp/new_user_name.txt ]; then
+    NEW_USER=$(cat /tmp/new_user_name.txt)
+else
+    NEW_USER="prod-dokploy"  # Fallback to default
+fi
 LOG_FILE="/var/log/vps_setup.log"
 
 # --- Security Check ---
 if [ "$(whoami)" != "$NEW_USER" ]; then
-  echo "ERROR: This script must be run by the user '$NEW_USER'."
+  echo -e "${RED}ERROR: This script must be run by the user '$NEW_USER'${NC}"
   exit 1
 fi
 
-echo "--- Post-SSL Security Configuration ---"
 echo "$(date): Starting post-SSL security setup" | sudo tee -a "$LOG_FILE"
 
-# --- Close Dokploy port 3000 ---
-echo "--- Securing Dokploy port 3000... ---"
+show_section "Securing Dokploy Port 3000"
 
 # Wait for Docker to be ready
 sleep 3

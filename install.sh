@@ -1,29 +1,40 @@
 #!/bin/bash
 # One-Command Installation Script for Dokploy VPS Setup
-# Usage: curl -sSL https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/install.sh | bash
+# Usage: curl -sSL https://raw.githubusercontent.com/alexandreravelli/vps-hardening-script-ubuntu-24.04-LTS/main/install.sh | bash
 
 set -e
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
 # Configuration
-REPO_URL="${REPO_URL:-git@github.com:ZenPloy-cloud/ubuntu-2404-production-deploy.git}"
-INSTALL_DIR="$HOME/dokploy-setup"
+REPO_URL="${REPO_URL:-git@github.com:alexandreravelli/vps-hardening-script-ubuntu-24.04-LTS.git}"
+INSTALL_DIR="$HOME/vps-hardening"
 DEFAULT_USER="ubuntu"
 
-# Allow override via environment variable for HTTPS
-# Usage: REPO_URL="https://github.com/..." bash install.sh
-
-echo ""
-echo "=================================================================="
-echo "  🚀 Dokploy VPS Setup - One-Command Installer"
-echo "=================================================================="
-echo ""
+# Load banner functions if available, otherwise use simple output
+if [ -f "banner.sh" ]; then
+    source banner.sh
+    show_install_banner
+else
+    # Colors
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    CYAN='\033[0;36m'
+    NC='\033[0m'
+    
+    clear
+    echo -e "${CYAN}"
+    echo "╔══════════════════════════════════════════════════════════════════════════════╗"
+    echo "║                                                                              ║"
+    echo "║                    🚀 VPS HARDENING - ONE-COMMAND INSTALLER 🚀               ║"
+    echo "║                                                                              ║"
+    echo "║                    Ubuntu 24.04 LTS Security Hardening                      ║"
+    echo "║                         with Dokploy Deployment                             ║"
+    echo "║                                                                              ║"
+    echo "╚══════════════════════════════════════════════════════════════════════════════╝"
+    echo -e "${NC}"
+    echo ""
+fi
 
 # Check if running as default user
 if [ "$(whoami)" != "$DEFAULT_USER" ]; then
@@ -83,11 +94,12 @@ echo "  ⚠️  IMPORTANT INFORMATION"
 echo "=================================================================="
 echo ""
 echo "This installation will:"
-echo "  1. Create a new secure user 'prod-dokploy'"
-echo "  2. Change SSH port to a random port (50000-59999)"
-echo "  3. Configure firewall (UFW)"
-echo "  4. Install Docker and Dokploy"
-echo "  5. Remove the default 'ubuntu' user"
+echo "  1. Create a new secure user (you will choose the username)"
+echo "  2. Configure SSH access with your public key"
+echo "  3. Change SSH port to a random port (50000-59999)"
+echo "  4. Configure firewall (UFW)"
+echo "  5. Install Docker and Dokploy"
+echo "  6. Remove the default 'ubuntu' user"
 echo ""
 echo -e "${YELLOW}⚠️  You will need to reconnect with the new user after step 1${NC}"
 echo ""
@@ -108,6 +120,13 @@ echo ""
 
 ./create_user.sh
 
+# Read the created username
+if [ -f /tmp/new_user_name.txt ]; then
+    CREATED_USER=$(cat /tmp/new_user_name.txt)
+else
+    CREATED_USER="prod-dokploy"
+fi
+
 echo ""
 echo "=================================================================="
 echo "  ✅ User created successfully!"
@@ -119,7 +138,7 @@ echo "1. Disconnect from this session:"
 echo "   exit"
 echo ""
 echo "2. Reconnect with the new user:"
-echo "   ssh prod-dokploy@$(curl -s ifconfig.me 2>/dev/null)"
+echo "   ssh $CREATED_USER@$(curl -s ifconfig.me 2>/dev/null)"
 echo ""
 echo "3. Navigate to the installation directory:"
 echo "   cd $INSTALL_DIR"

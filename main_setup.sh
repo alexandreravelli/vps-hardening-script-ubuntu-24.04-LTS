@@ -3,8 +3,20 @@
 
 set -e
 
+# Load banner functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/banner.sh"
+
+# Show main setup banner
+show_setup_banner
+
 # --- Configuration variables ---
-NEW_USER="prod-dokploy"
+# Read the username from the file created by create_user.sh
+if [ -f /tmp/new_user_name.txt ]; then
+    NEW_USER=$(cat /tmp/new_user_name.txt)
+else
+    NEW_USER="prod-dokploy"  # Fallback to default
+fi
 DEFAULT_USER="ubuntu"
 NEW_SSH_PORT=$((RANDOM % 10000 + 50000))  # Random port between 50000-59999
 
@@ -14,6 +26,11 @@ exec 1> >(tee -a "$LOG_FILE")
 exec 2> >(tee -a "$LOG_FILE" >&2)
 
 echo "$(date): Starting VPS setup with SSH port: $NEW_SSH_PORT" | sudo tee -a "$LOG_FILE"
+
+show_info_box "Configuration" \
+    "User: ${CYAN}$NEW_USER${NC}" \
+    "SSH Port: ${CYAN}$NEW_SSH_PORT${NC}" \
+    "Log File: ${GRAY}$LOG_FILE${NC}"
 
 # --- Enhanced Rollback function ---
 rollback() {
@@ -124,6 +141,11 @@ echo "--- Updating system packages... ---"
 sudo apt-get update || rollback "Failed to update package list"
 sudo apt-get upgrade -y || rollback "Failed to upgrade packages"
 echo "$(date): System packages updated successfully" | sudo tee -a "$LOG_FILE"
+
+# --- 2.1. Install System Monitoring Tools ---
+echo "--- Installing system monitoring tools (btop)... ---"
+sudo snap install btop || echo "⚠️  Warning: Could not install btop via snap"
+echo "$(date): System monitoring tools installed" | sudo tee -a "$LOG_FILE"
 
 # --- 3. Change SSH Port ---
 echo "--- Changing the default SSH port to $NEW_SSH_PORT... ---"
@@ -364,39 +386,55 @@ fi
 
 # --- End of script ---
 echo "$(date): VPS setup completed successfully" | sudo tee -a "$LOG_FILE"
+
+PUBLIC_IP=$(curl -s ifconfig.me 2>/dev/null || echo '<your_ip>')
+
 echo ""
-echo "=================================================================="
-echo "Setup completed successfully!"
-echo "=================================================================="
-echo ""
-echo "SSH CONNECTION INFO:"
-echo "   SSH Port: $NEW_SSH_PORT"
-echo "   Username: $NEW_USER"
-echo "   Connection: ssh $NEW_USER@<your_ip> -p $NEW_SSH_PORT"
-echo ""
-echo "COMPLETED CONFIGURATIONS:"
-echo "   - Secure user created"
-echo "   - SSH port changed and secured"
-echo "   - UFW firewall configured"
-echo "   - Fail2Ban enabled"
-echo "   - Automatic updates configured"
-echo "   - Dokploy installed"
-echo ""
-echo "NEXT STEPS:"
-echo "   1. Access Dokploy: http://<your_ip>:3000"
-echo "   2. Create your admin account"
-echo "   3. Configure your domain and SSL certificate"
-echo "   4. Run: ./post_ssl_setup.sh (to secure port 3000)"
-echo "   5. Check system: ./system_check.sh"
-echo "   6. After reboot: ./post_reboot_check.sh"
-echo ""
-echo "IMPORTANT NOTES:"
-echo "   - SSH port: $NEW_SSH_PORT (saved in /tmp/ssh_port_info.txt)"
-echo "   - Docker logs are rotated (max 30MB per container)"
-echo "   - Docker ports (3000, 80, 443) are open by default"
-echo "   - All changes logged to: $LOG_FILE"
+show_success_banner
+
+show_info_box "SSH Connection Information" \
+    "SSH Port: ${CYAN}$NEW_SSH_PORT${NC}" \
+    "Username: ${CYAN}$NEW_USER${NC}" \
+    "Connection: ${CYAN}ssh $NEW_USER@$PUBLIC_IP -p $NEW_SSH_PORT${NC}" \
+    "" \
+    "Port saved in: ${GRAY}/tmp/ssh_port_info.txt${NC}"
+
+show_info_box "Completed Configurations" \
+    "${GREEN}✓${NC} Secure user created" \
+    "${GREEN}✓${NC} SSH port changed and secured" \
+    "${GREEN}✓${NC} UFW firewall configured" \
+    "${GREEN}✓${NC} Fail2Ban enabled" \
+    "${GREEN}✓${NC} Automatic updates configured" \
+    "${GREEN}✓${NC} Docker with log rotation" \
+    "${GREEN}✓${NC} btop system monitor installed" \
+    "${GREEN}✓${NC} Dokploy installed and running"
+
+show_info_box "Next Steps" \
+    "${BOLD}1.${NC} Access Dokploy web interface:" \
+    "   ${CYAN}http://$PUBLIC_IP:3000${NC}" \
+    "" \
+    "${BOLD}2.${NC} Create your admin account" \
+    "" \
+    "${BOLD}3.${NC} Configure your domain and SSL certificate" \
+    "" \
+    "${BOLD}4.${NC} Secure port 3000 after SSL setup:" \
+    "   ${CYAN}./post_ssl_setup.sh${NC}" \
+    "" \
+    "${BOLD}5.${NC} Verify system health:" \
+    "   ${CYAN}./system_check.sh${NC}" \
+    "" \
+    "${BOLD}6.${NC} Monitor system resources:" \
+    "   ${CYAN}btop${NC}"
+
+show_info_box "Important Notes" \
+    "• Docker logs are rotated (max 30MB per container)" \
+    "• Docker ports (3000, 80, 443) are open by default" \
+    "• All changes logged to: ${GRAY}$LOG_FILE${NC}" \
+    "• Default user '${GRAY}ubuntu${NC}' has been removed"
+
 echo ""
 echo "TROUBLESHOOTING:"
 echo "   - System health: ./system_check.sh"
+echo "   - Resource monitor: btop"
 echo ""
 echo "=================================================================="
