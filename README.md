@@ -264,16 +264,6 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-## 🙏 Acknowledgments
-
-Built with security best practices from:
-- [CIS Ubuntu Benchmarks](https://www.cisecurity.org/)
-- [Docker Security Best Practices](https://docs.docker.com/engine/security/)
-- [SSH Hardening Guide](https://www.ssh.com/academy/ssh/security)
-- [Dokploy Documentation](https://dokploy.com/docs)
-
----
-
 <div align="center">
 
 **⭐ Star this repo if it helped you!**
