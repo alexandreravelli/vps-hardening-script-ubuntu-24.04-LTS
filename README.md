@@ -274,20 +274,10 @@ Built with security best practices from:
 
 ---
 
-## 📞 Support
-
-- 📖 **Documentation**: Check [GUIDE.md](GUIDE.md) and [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
-- 🐛 **Issues**: [GitHub Issues](https://github.com/alexandreravelli/vps-hardening-script-ubuntu-24.04-LTS/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/alexandreravelli/vps-hardening-script-ubuntu-24.04-LTS/discussions)
-
----
-
 <div align="center">
 
 **⭐ Star this repo if it helped you!**
 
 Made with ❤️ for the DevOps community
-
-[Report Bug](https://github.com/alexandreravelli/vps-hardening-script-ubuntu-24.04-LTS/issues) · [Request Feature](https://github.com/alexandreravelli/vps-hardening-script-ubuntu-24.04-LTS/issues) · [Documentation](GUIDE.md)
 
 </div>
