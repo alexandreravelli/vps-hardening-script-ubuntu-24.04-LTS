@@ -389,30 +389,6 @@ else
     echo "--- SSH already configured, skipping... ---"
 fi
 
-# --- 4. Harden Network Settings ---
-echo "--- Hardening network configuration... ---"
-cat <<EOF | sudo tee /etc/host.conf > /dev/null
-order bind,hosts
-multi on
-EOF
-echo "✅ Network configuration hardened."
-
-# --- 5. Install and Configure Security Tools ---
-echo "--- Installing UFW (Firewall) and Fail2Ban... ---"
-sudo apt-get install -y ufw fail2ban || rollback "Failed to install security tools"
-
-# --- Configure UFW Firewall ---
-echo "--- Configuring UFW firewall... ---"
-# UFW manages SSH only. Docker manages its own ports (3000, 80, 443).
-sudo ufw --force reset || rollback "Failed to reset UFW"
-sudo ufw --force default deny incoming || rollback "Failed to set UFW default deny"
-sudo ufw --force default allow outgoing || rollback "Failed to set UFW default allow outgoing"
-sudo ufw allow $NEW_SSH_PORT/tcp || rollback "Failed to allow SSH port in UFW"
-sudo ufw deny 22/tcp || rollback "Failed to deny default SSH port in UFW"
-sudo ufw --force enable || rollback "Failed to enable UFW"
-echo "✅ Firewall configured (SSH only - Docker manages its own ports)."
-echo "$(date): UFW firewall configured successfully" | sudo tee -a "$LOG_FILE"
-
 # --- 5. Configure Fail2Ban ---
 if ! check_state "fail2ban_configured"; then
     echo "--- Configuring Fail2Ban... ---"
