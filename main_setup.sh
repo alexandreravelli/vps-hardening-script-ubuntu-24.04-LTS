@@ -444,6 +444,8 @@ fi
 if ! check_state "auto_updates_configured"; then
     echo "--- Configuring automatic security updates... ---"
     sudo apt-get install -y unattended-upgrades apt-listchanges || rollback "Failed to install unattended-upgrades"
+    
+    # Enable automatic updates
     echo 'unattended-upgrades unattended-upgrades/enable_auto_updates boolean true' | sudo debconf-set-selections
     sudo dpkg-reconfigure -f noninteractive unattended-upgrades || rollback "Failed to configure automatic updates"
     
@@ -459,10 +461,23 @@ Unattended-Upgrade::MinimalSteps "true";
 Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
 Unattended-Upgrade::Remove-Unused-Dependencies "true";
 Unattended-Upgrade::Automatic-Reboot "false";
+Unattended-Upgrade::Mail "root";
 EOF
     
+    # Enable automatic updates in periodic config
+    cat <<EOF | sudo tee /etc/apt/apt.conf.d/20auto-upgrades > /dev/null
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Download-Upgradeable-Packages "1";
+APT::Periodic::AutocleanInterval "7";
+APT::Periodic::Unattended-Upgrade "1";
+EOF
+    
+    # Verify service is enabled
+    sudo systemctl enable unattended-upgrades || true
+    sudo systemctl start unattended-upgrades || true
+    
     save_state "auto_updates_configured"
-    echo "✅ Automatic security updates configured"
+    echo "✅ Automatic security updates configured and enabled"
     echo "$(date): Automatic security updates configured" | sudo tee -a "$LOG_FILE"
 else
     echo "--- Automatic updates already configured, skipping... ---"
