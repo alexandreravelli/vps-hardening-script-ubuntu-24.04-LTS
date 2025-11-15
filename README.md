@@ -128,7 +128,7 @@ http://YOUR_VPS_IP:3000
 ### 🐳 Docker Production-Ready
 - Log rotation (10MB max, 3 files)
 - Overlay2 storage driver
-- Live-restore enabled
+- Swarm-compatible configuration
 - Health checks before deployment
 - Network cleanup automation
 

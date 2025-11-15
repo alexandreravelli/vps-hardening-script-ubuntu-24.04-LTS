@@ -63,10 +63,11 @@ sudo tee /etc/docker/daemon.json > /dev/null <<EOF
   ],
   "userland-proxy": false,
   "iptables": true,
-  "live-restore": true,
   "log-level": "warn"
 }
 EOF
+
+echo -e "${YELLOW}⚠️  Note: live-restore is disabled (incompatible with Docker Swarm/Dokploy)${NC}"
 
 echo -e "${GREEN}✓${NC} daemon.json configured"
 echo ""
@@ -162,7 +163,7 @@ echo "Current settings:"
 echo "  • Log rotation: 10MB max, 3 files, compressed"
 echo "  • Storage driver: overlay2"
 echo "  • Network pool: 172.17.0.0/12"
-echo "  • Live restore: enabled"
+echo "  • Live restore: disabled (Swarm-compatible)"
 echo "  • Userland proxy: disabled (better performance)"
 echo ""
 echo "Verification commands:"
