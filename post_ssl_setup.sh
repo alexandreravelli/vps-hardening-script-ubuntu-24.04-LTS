@@ -125,23 +125,10 @@ echo "→ Making iptables rules persistent..."
 sudo mkdir -p /etc/iptables
 sudo iptables-save | sudo tee /etc/iptables/rules.v4 > /dev/null
 
-# Use netfilter-persistent if available, otherwise create systemd service
-if command -v netfilter-persistent &> /dev/null; then
-    echo "→ Using netfilter-persistent..."
-    if sudo netfilter-persistent save 2>/dev/null; then
-        sudo systemctl enable netfilter-persistent 2>/dev/null || true
-        echo "  ✅ Rules saved with netfilter-persistent"
-    else
-        echo "  ⚠️  netfilter-persistent failed, using systemd service instead..."
-        # Fall through to systemd service creation
-    fi
-fi
-
-# If netfilter-persistent is not available or failed, create systemd service
-if ! command -v netfilter-persistent &> /dev/null || ! sudo systemctl is-enabled netfilter-persistent &>/dev/null; then
-    echo "→ Creating systemd service for iptables restore..."
-    # Create systemd service to restore rules on boot
-    cat <<'EOFSVC' | sudo tee /etc/systemd/system/iptables-restore.service > /dev/null
+# Create systemd service for iptables persistence (we don't use netfilter-persistent as it conflicts with UFW)
+echo "→ Creating systemd service for iptables restore..."
+# Create systemd service to restore rules on boot
+cat <<'EOFSVC' | sudo tee /etc/systemd/system/iptables-restore.service > /dev/null
 [Unit]
 Description=Restore iptables rules
 Before=network-pre.target docker.service
@@ -159,9 +146,8 @@ StandardOutput=journal
 WantedBy=multi-user.target
 EOFSVC
 
-    sudo systemctl daemon-reload
-    sudo systemctl enable iptables-restore.service
-fi
+sudo systemctl daemon-reload
+sudo systemctl enable iptables-restore.service
 
 echo "✅ iptables rules saved and will persist after reboot"
 echo "$(date): Post-SSL security configuration completed" | sudo tee -a "$LOG_FILE"
