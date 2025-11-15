@@ -241,7 +241,20 @@ fi
 # --- 2. Install Essential Security Tools FIRST ---
 if ! check_state "security_tools_installed"; then
     echo "--- Installing security tools... ---"
-    sudo apt-get install -y ufw fail2ban iptables-persistent || rollback "Failed to install security tools"
+    # Install UFW and Fail2Ban first (these are critical)
+    sudo apt-get install -y ufw fail2ban || rollback "Failed to install UFW and Fail2Ban"
+    
+    # Try to install iptables-persistent, but don't fail if it has dependency issues
+    # We'll handle iptables persistence manually if needed
+    echo "→ Attempting to install iptables-persistent..."
+    if sudo apt-get install -y iptables-persistent 2>/dev/null; then
+        echo "  ✅ iptables-persistent installed"
+    else
+        echo "  ⚠️  iptables-persistent has dependency issues, will use alternative method"
+        echo "  → Installing iptables package only..."
+        sudo apt-get install -y iptables || rollback "Failed to install iptables"
+    fi
+    
     save_state "security_tools_installed"
     echo "✅ Security tools installed"
 else

@@ -125,12 +125,20 @@ echo "→ Making iptables rules persistent..."
 sudo mkdir -p /etc/iptables
 sudo iptables-save | sudo tee /etc/iptables/rules.v4 > /dev/null
 
-# Use iptables-persistent if available, otherwise create systemd service
+# Use netfilter-persistent if available, otherwise create systemd service
 if command -v netfilter-persistent &> /dev/null; then
     echo "→ Using netfilter-persistent..."
-    sudo netfilter-persistent save
-    sudo systemctl enable netfilter-persistent
-else
+    if sudo netfilter-persistent save 2>/dev/null; then
+        sudo systemctl enable netfilter-persistent 2>/dev/null || true
+        echo "  ✅ Rules saved with netfilter-persistent"
+    else
+        echo "  ⚠️  netfilter-persistent failed, using systemd service instead..."
+        # Fall through to systemd service creation
+    fi
+fi
+
+# If netfilter-persistent is not available or failed, create systemd service
+if ! command -v netfilter-persistent &> /dev/null || ! sudo systemctl is-enabled netfilter-persistent &>/dev/null; then
     echo "→ Creating systemd service for iptables restore..."
     # Create systemd service to restore rules on boot
     cat <<'EOFSVC' | sudo tee /etc/systemd/system/iptables-restore.service > /dev/null
