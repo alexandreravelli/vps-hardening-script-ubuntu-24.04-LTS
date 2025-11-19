@@ -185,6 +185,11 @@ if command -v docker &> /dev/null; then
     # Daemon config
     if [ -f /etc/docker/daemon.json ]; then
         report_finding "PASS" "Docker daemon.json exists"
+        
+        # Check for live-restore (incompatible with Swarm)
+        if grep -q '"live-restore".*true' /etc/docker/daemon.json 2>/dev/null; then
+            report_finding "MEDIUM" "live-restore enabled" "Incompatible with Docker Swarm/Dokploy"
+        fi
     else
         report_finding "MEDIUM" "Docker daemon.json missing"
     fi
@@ -197,8 +202,91 @@ if command -v docker &> /dev/null; then
             report_finding "HIGH" "Port 3000 exposed to world" "Run post_ssl_setup.sh"
         fi
     fi
+    
+    # Check Docker socket permissions
+    if [ -S /var/run/docker.sock ]; then
+        SOCKET_PERMS=$(stat -c %a /var/run/docker.sock)
+        if [ "$SOCKET_PERMS" = "660" ] || [ "$SOCKET_PERMS" = "600" ]; then
+            report_finding "PASS" "Docker socket permissions secure ($SOCKET_PERMS)"
+        else
+            report_finding "MEDIUM" "Docker socket permissions too open ($SOCKET_PERMS)"
+        fi
+    fi
 else
     report_finding "LOW" "Docker not installed"
+fi
+
+# 6. Backup Status
+show_section "Backup Status"
+
+if [ -d /var/backups/vps-hardening ]; then
+    BACKUP_COUNT=$(ls -1 /var/backups/vps-hardening 2>/dev/null | wc -l)
+    if [ "$BACKUP_COUNT" -gt 0 ]; then
+        LATEST_BACKUP=$(ls -t /var/backups/vps-hardening | head -1)
+        report_finding "PASS" "System backups exist ($BACKUP_COUNT backups)" "Latest: $LATEST_BACKUP"
+    else
+        report_finding "MEDIUM" "No system backups found" "Run create_backup.sh"
+    fi
+else
+    report_finding "MEDIUM" "Backup directory doesn't exist" "Run create_backup.sh"
+fi
+
+# 7. Setup State
+show_section "Setup State"
+
+if [ -d "$HOME/.vps_setup_state" ]; then
+    STATE_COUNT=$(ls -1 "$HOME/.vps_setup_state" 2>/dev/null | wc -l)
+    if [ "$STATE_COUNT" -gt 5 ]; then
+        report_finding "PASS" "Setup completed ($STATE_COUNT steps)"
+    else
+        report_finding "MEDIUM" "Setup incomplete ($STATE_COUNT steps)" "Run main_setup.sh"
+    fi
+else
+    report_finding "HIGH" "Setup not started" "Run main_setup.sh"
+fi
+
+# 8. Log Files
+show_section "Log Files"
+
+if [ -f /var/log/vps_setup.log ]; then
+    LOG_SIZE=$(du -h /var/log/vps_setup.log | cut -f1)
+    report_finding "PASS" "Setup log exists ($LOG_SIZE)"
+    
+    # Check for errors in log
+    ERROR_COUNT=$(grep -c "ERROR\|Failed\|failed" /var/log/vps_setup.log 2>/dev/null || echo "0")
+    if [ "$ERROR_COUNT" -gt 0 ]; then
+        report_finding "MEDIUM" "$ERROR_COUNT errors found in setup log" "Review: tail -100 /var/log/vps_setup.log"
+    fi
+else
+    report_finding "LOW" "Setup log not found"
+fi
+
+# 9. Port 22 Status
+show_section "Port 22 Status"
+
+if ss -tuln | grep -q ":22 "; then
+    report_finding "HIGH" "Port 22 still open" "Should be closed after setup"
+else
+    report_finding "PASS" "Port 22 closed (secure)"
+fi
+
+# 10. Dokploy Status
+show_section "Dokploy Status"
+
+if command -v docker &> /dev/null; then
+    if docker ps | grep -q dokploy; then
+        report_finding "PASS" "Dokploy container running"
+        
+        # Check if accessible
+        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 2>/dev/null || echo "000")
+        if [[ "$HTTP_CODE" =~ ^(200|302)$ ]]; then
+            report_finding "PASS" "Dokploy responding (HTTP $HTTP_CODE)"
+        else
+            report_finding "MEDIUM" "Dokploy not responding (HTTP $HTTP_CODE)"
+        fi
+    else
+        report_finding "MEDIUM" "Dokploy container not running"
+    fi
 fi
 
 # Summary
@@ -213,10 +301,40 @@ echo -e "${CYAN}Low:      $LOW${NC}"
 echo -e "${GREEN}Passed:   $PASS${NC}"
 echo ""
 
+# Recommendations
 if [ $CRITICAL -gt 0 ] || [ $HIGH -gt 0 ]; then
+    echo "=================================================================="
+    echo "  🔧 RECOMMENDED ACTIONS"
+    echo "=================================================================="
+    echo ""
+    
+    if [ $CRITICAL -gt 0 ]; then
+        echo -e "${RED}CRITICAL ISSUES - Fix immediately:${NC}"
+        echo "  • Review critical findings above"
+        echo "  • Run: ./emergency_rollback.sh if system is unstable"
+        echo ""
+    fi
+    
+    if [ $HIGH -gt 0 ]; then
+        echo -e "${RED}HIGH PRIORITY:${NC}"
+        echo "  • Close port 22 if still open"
+        echo "  • Remove default ubuntu user if present"
+        echo "  • Secure port 3000 after SSL setup"
+        echo ""
+    fi
+    
+    echo "=================================================================="
+    echo ""
     echo -e "${RED}❌ Security issues found. Please address critical/high items.${NC}"
     exit 1
 else
     echo -e "${GREEN}✅ System security looks good!${NC}"
+    echo ""
+    echo "Recommendations:"
+    echo "  • Run security audit monthly"
+    echo "  • Keep system updated: sudo apt update && sudo apt upgrade"
+    echo "  • Review logs regularly: tail -100 /var/log/vps_setup.log"
+    echo "  • Create backups before changes: ./create_backup.sh"
+    echo ""
     exit 0
 fi
