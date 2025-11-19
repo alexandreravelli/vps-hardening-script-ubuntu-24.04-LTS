@@ -49,36 +49,43 @@ After testing your SSH connection with the new user:
 # Reconnect with your new user
 ssh your-new-user@your-server-ip
 
-# Check which directory was created
-ls -la ~
+# Navigate to the scripts directory
+cd ~/vps-hardening*
 
-# Navigate to the scripts directory (use the actual name from ls output)
-cd ~/vps-hardening-script-ubuntu-24.04-LTS
-# OR
-cd ~/vps-hardening
-
-# Run the main setup
-./main_setup.sh
-
-# OR use the interactive menu
-./menu.sh
+# Run the continuation script (RECOMMENDED)
+./continue_setup.sh
 ```
 
-**This will show:**
-- 📋 Installation plan with all 10 steps and time estimates
+**The `continue_setup.sh` script will:**
+- ✅ Verify you're logged in as the correct user
+- ✅ Create a complete system backup automatically
+- ✅ Run the full setup (main_setup.sh)
+- ✅ Show you the next steps
+
+**Alternative: Use the interactive menu**
+```bash
+./menu.sh
+# Choose option 1: Run Full Setup
+```
+
+### 3. What Gets Installed
+
+**Installation includes (~15 minutes):**
+- 📋 Pre-installation summary with time estimates
 - [████████████░░░░] Modern progress bar with ETA
 - ✅ Validation checkpoints after each step
 - 🎯 Complete dashboard at the end
 
-**Installation includes:**
+**Configuration:**
 - Change SSH port to random high port (50000-59999)
 - Configure UFW firewall with validation
 - Install and configure Docker + Dokploy
 - Enable Fail2Ban and automatic security updates
+- Configure Quad9 DNS with DoT
 - Remove the default ubuntu user
-- ~15 minutes total time
+- Create automatic backups
 
-### 3. Post-Installation Dashboard
+### 4. Post-Installation Dashboard
 
 After installation completes, you'll see:
 
@@ -102,13 +109,14 @@ After installation completes, you'll see:
 
 ━━━ Documentation ━━━
   • Full docs:      cat README.md
-  • Security guide: cat SECURITY.md
   • Health check:   ./system_check.sh
+  • Security audit: ./security_audit.sh
 
 ✓ Installation completed in 12m 34s
+✓ Backup created: /var/backups/vps-hardening/20241119_143022
 ```
 
-### 4. Troubleshooting
+### 5. Troubleshooting
 
 **If scripts directory not found:**
 ```bash
@@ -119,7 +127,7 @@ ls -la ~
 git clone https://github.com/alexandreravelli/vps-hardening-script-ubuntu-24.04-LTS.git
 cd vps-hardening-script-ubuntu-24.04-LTS
 chmod +x *.sh
-./main_setup.sh
+./continue_setup.sh
 ```
 
 **If you get permission errors:**
@@ -130,6 +138,16 @@ chmod +x ~/vps-hardening*/*.sh
 # Or re-run make_executable.sh
 cd ~/vps-hardening*
 ./make_executable.sh
+```
+
+**If you need to restore from backup:**
+```bash
+# List available backups
+ls -la /var/backups/vps-hardening/
+
+# Restore SSH config (example)
+sudo cp -r /var/backups/vps-hardening/YYYYMMDD_HHMMSS/ssh /etc/
+sudo systemctl restart ssh
 ```
 
 # Navigate to the scripts directory
