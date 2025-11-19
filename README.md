@@ -44,6 +44,8 @@ sudo ./menu.sh
 4.  **🔒 Post-SSL Security**: Run this *after* you've set up your domains in Dokploy to block external access to port 3000.
 5.  **📊 System Health Check**: Run a deep security audit of your system.
 6.  **🐳 Configure Docker**: Optimize Docker daemon settings.
+7.  **🔍 System Integrity Check**: Verify critical binaries haven't been tampered with.
+8.  **✅ Validate Scripts**: Check all scripts for common issues before running.
 
 ## 🛡️ Security Details
 

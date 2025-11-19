@@ -59,10 +59,16 @@ EOF
     echo -e "  ${BOLD}6.${NC} 🐳 Configure Docker"
     echo -e "     ${GRAY}(Log rotation, storage driver)${NC}"
     echo ""
+    echo -e "  ${BOLD}7.${NC} 🔍 System Integrity Check"
+    echo -e "     ${GRAY}(Verify critical binaries)${NC}"
+    echo ""
+    echo -e "  ${BOLD}8.${NC} ✅ Validate Scripts"
+    echo -e "     ${GRAY}(Check all scripts for issues)${NC}"
+    echo ""
     echo -e "  ${BOLD}0.${NC} 🚪 Exit"
     echo ""
     
-    read -p "Enter choice [0-6]: " choice
+    read -p "Enter choice [0-8]: " choice
     
     case $choice in
         1)
@@ -91,6 +97,22 @@ EOF
             ;;
         6)
             ./configure_docker.sh
+            read -p "Press Enter to return to menu..."
+            ;;
+        7)
+            if [ -f "./check_system_integrity.sh" ]; then
+                ./check_system_integrity.sh
+            else
+                echo -e "${RED}Error: check_system_integrity.sh not found!${NC}"
+            fi
+            read -p "Press Enter to return to menu..."
+            ;;
+        8)
+            if [ -f "./validate_scripts.sh" ]; then
+                ./validate_scripts.sh
+            else
+                echo -e "${RED}Error: validate_scripts.sh not found!${NC}"
+            fi
             read -p "Press Enter to return to menu..."
             ;;
         0)

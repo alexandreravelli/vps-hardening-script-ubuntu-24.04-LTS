@@ -97,16 +97,30 @@ echo ""
 echo "Installation directory: $INSTALL_DIR"
 echo "Current user: $(whoami)"
 
-# Detect both IPv4 and IPv6
-IPV4=$(curl -4 -s ifconfig.me 2>/dev/null || echo "")
-IPV6=$(curl -6 -s ifconfig.me 2>/dev/null || echo "")
+# Detect both IPv4 and IPv6 with validation
+IPV4=$(curl -4 -s --max-time 5 --retry 2 ifconfig.me 2>/dev/null || echo "")
+IPV6=$(curl -6 -s --max-time 5 --retry 2 ifconfig.me 2>/dev/null || echo "")
 
+# Validate IPv4 format
 if [ -n "$IPV4" ]; then
-    echo "Public IPv4: $IPV4"
+    if [[ "$IPV4" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+        echo "Public IPv4: $IPV4"
+    else
+        echo "Public IPv4: Unable to detect (invalid format)"
+        IPV4=""
+    fi
 fi
+
+# Validate IPv6 format (basic check)
 if [ -n "$IPV6" ]; then
-    echo "Public IPv6: $IPV6"
+    if [[ "$IPV6" =~ ^[0-9a-fA-F:]+$ ]]; then
+        echo "Public IPv6: $IPV6"
+    else
+        echo "Public IPv6: Unable to detect (invalid format)"
+        IPV6=""
+    fi
 fi
+
 if [ -z "$IPV4" ] && [ -z "$IPV6" ]; then
     echo "Public IP: Unable to detect"
 fi

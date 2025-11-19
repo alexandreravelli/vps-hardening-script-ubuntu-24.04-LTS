@@ -160,6 +160,20 @@ EOF
 chmod 600 "$CONFIG_FILE"
 echo "✅ Configuration written to $CONFIG_FILE"
 
+# Validate netplan configuration syntax
+echo "→ Validating netplan configuration..."
+if ! netplan generate 2>/dev/null; then
+    echo -e "${RED}❌ Invalid netplan configuration syntax${NC}"
+    echo "Configuration file: $CONFIG_FILE"
+    echo ""
+    echo "Errors:"
+    netplan generate 2>&1 | sed 's/^/  /'
+    echo ""
+    rm -f "$CONFIG_FILE"
+    exit 1
+fi
+echo "✅ Configuration syntax is valid"
+
 # 4. Apply with Safety Net
 echo ""
 echo "=================================================================="

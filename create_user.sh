@@ -92,10 +92,62 @@ show_section "Creating User: $NEW_USER"
 # Create user non-interactively first
 sudo adduser --gecos "" --disabled-password "$NEW_USER"
 
-# Set password manually to ensure interactivity works
+# Set password manually (robust method for curl | bash)
 echo ""
 echo "Set password for $NEW_USER:"
-sudo passwd "$NEW_USER"
+
+while true; do
+    # Use /dev/tty explicitly for password input
+    if [ -c /dev/tty ]; then
+        # Read password with proper TTY handling
+        PASS1=""
+        PASS2=""
+        
+        # First password
+        echo -n "New password: " > /dev/tty
+        IFS= read -rs PASS1 < /dev/tty
+        echo "" > /dev/tty
+        
+        # Second password
+        echo -n "Retype new password: " > /dev/tty
+        IFS= read -rs PASS2 < /dev/tty
+        echo "" > /dev/tty
+    else
+        # Fallback if TTY is somehow missing
+        echo "ERROR: No TTY detected for password input."
+        exit 1
+    fi
+
+    # Validate password is not empty
+    if [ -z "$PASS1" ]; then
+        echo -e "${RED}❌ Password cannot be empty.${NC}"
+        continue
+    fi
+    
+    # Validate minimum length (8 characters)
+    if [ ${#PASS1} -lt 8 ]; then
+        echo -e "${RED}❌ Password must be at least 8 characters long.${NC}"
+        continue
+    fi
+
+    # Check if passwords match
+    if [ "$PASS1" != "$PASS2" ]; then
+        echo -e "${RED}❌ Passwords do not match. Try again.${NC}"
+        continue
+    fi
+
+    # Apply password using chpasswd (avoids interactive passwd command issues)
+    echo "$NEW_USER:$PASS1" | sudo chpasswd
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✅ Password set successfully${NC}"
+        # Clear password variables from memory
+        PASS1=""
+        PASS2=""
+        break
+    else
+        echo -e "${RED}❌ Failed to set password. Please try again.${NC}"
+    fi
+done
 
 echo ""
 show_section "Granting Sudo Privileges"
@@ -113,13 +165,13 @@ echo ""
 echo -n "SSH Public Key: "
 
 # Read the public key from user input
-# Read the public key from user input
 if [ -c /dev/tty ]; then
     read -r SSH_KEY < /dev/tty
 else
     read -r SSH_KEY
 fi
 
+# Validate SSH key is not empty
 if [ -z "$SSH_KEY" ]; then
     echo ""
     echo "❌ ERROR: No SSH key provided!"
@@ -132,6 +184,38 @@ if [ -z "$SSH_KEY" ]; then
     echo ""
     exit 1
 fi
+
+# Validate SSH key format (basic validation)
+if ! [[ "$SSH_KEY" =~ ^(ssh-rsa|ssh-ed25519|ecdsa-sha2-nistp256|ecdsa-sha2-nistp384|ecdsa-sha2-nistp521)[[:space:]][A-Za-z0-9+/]+[=]{0,3}([[:space:]].*)?$ ]]; then
+    echo ""
+    echo "❌ ERROR: Invalid SSH key format!"
+    echo ""
+    echo "The key should start with one of:"
+    echo "  - ssh-rsa"
+    echo "  - ssh-ed25519"
+    echo "  - ecdsa-sha2-nistp256"
+    echo ""
+    echo "Example of valid key:"
+    echo "  ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGx... user@host"
+    echo ""
+    exit 1
+fi
+
+# Additional validation: check key length
+SSH_KEY_TYPE=$(echo "$SSH_KEY" | awk '{print $1}')
+SSH_KEY_DATA=$(echo "$SSH_KEY" | awk '{print $2}')
+
+if [ ${#SSH_KEY_DATA} -lt 50 ]; then
+    echo ""
+    echo "❌ ERROR: SSH key appears to be too short or incomplete!"
+    echo ""
+    echo "Make sure you copied the entire key including the base64 data."
+    echo ""
+    exit 1
+fi
+
+echo ""
+echo -e "${GREEN}✓${NC} SSH key format validated ($SSH_KEY_TYPE)"
 
 # Create .ssh directory for new user
 echo ""

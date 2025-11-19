@@ -236,6 +236,22 @@ trap 'rollback "Unexpected error" "$LINENO"' ERR
 # --- Run prerequisites check ---
 check_prerequisites
 
+# --- Optional: System Integrity Check ---
+if [ -f "$SCRIPT_DIR/check_system_integrity.sh" ]; then
+    echo ""
+    echo "→ Running system integrity check..."
+    if bash "$SCRIPT_DIR/check_system_integrity.sh"; then
+        echo "✅ System integrity verified"
+    else
+        echo ""
+        echo -e "${YELLOW}⚠️  System integrity check found issues${NC}"
+        read -p "Continue with setup anyway? (yes/no): " -r
+        if [[ ! $REPLY =~ ^[Yy]es$ ]]; then
+            exit 1
+        fi
+    fi
+fi
+
 # --- 1. System Update ---
 if ! check_state "system_updated"; then
     echo "--- Updating system packages... ---"
@@ -658,13 +674,35 @@ if ! check_state "dokploy_installed"; then
     echo "→ Downloading Dokploy installer..."
     curl -sSL https://dokploy.com/install.sh -o /tmp/dokploy_install.sh || rollback "Failed to download Dokploy installer"
     
+    # Verify the script is not empty and looks legitimate
+    if [ ! -s /tmp/dokploy_install.sh ]; then
+        rollback "Downloaded Dokploy installer is empty"
+    fi
+    
+    # Basic sanity check: should contain "dokploy" and be a bash script
+    if ! grep -q "dokploy" /tmp/dokploy_install.sh || ! head -1 /tmp/dokploy_install.sh | grep -q "^#!/"; then
+        echo "⚠️  WARNING: Dokploy installer doesn't look like expected"
+        echo "First line: $(head -1 /tmp/dokploy_install.sh)"
+        read -p "Continue anyway? (yes/no): " -r
+        if [[ ! $REPLY =~ ^[Yy]es$ ]]; then
+            rm -f /tmp/dokploy_install.sh
+            rollback "Dokploy installer verification failed"
+        fi
+    fi
+    
     # Show first few lines of script for transparency
     echo "→ Dokploy installer preview (first 10 lines):"
     head -10 /tmp/dokploy_install.sh | sed 's/^/  /'
     
+    # Calculate and display checksum for audit trail
+    INSTALLER_CHECKSUM=$(sha256sum /tmp/dokploy_install.sh | awk '{print $1}')
+    echo "→ Installer SHA256: $INSTALLER_CHECKSUM"
+    echo "$(date): Dokploy installer checksum: $INSTALLER_CHECKSUM" | sudo tee -a "$LOG_FILE"
+    
     echo "→ Running Dokploy installer..."
     sudo bash /tmp/dokploy_install.sh || rollback "Failed to install Dokploy"
     
+    # Secure cleanup
     rm -f /tmp/dokploy_install.sh
     
     save_state "dokploy_installed"
@@ -712,27 +750,33 @@ done
 echo "Verifying Dokploy web interface..."
 for i in {1..20}; do
     HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 2>/dev/null || echo "000")
-    if [[ "$HTTP_CODE" =~ ^(200|301|302|401|404)$ ]]; then
+    # Only accept 200 or 302 as success (not 404)
+    if [[ "$HTTP_CODE" =~ ^(200|302)$ ]]; then
         echo "✅ Dokploy is responding on port 3000 (HTTP $HTTP_CODE)"
         break
     fi
     if [ $i -eq 20 ]; then
-        echo "⚠️  Dokploy container running but not responding on port 3000"
+        echo "⚠️  Dokploy container running but not fully ready (HTTP $HTTP_CODE)"
         echo "This may be normal if Dokploy is still initializing"
-        echo "You can check later with: curl http://localhost:3000"
+        echo "You can check later with: curl -I http://localhost:3000"
+        echo "Expected: HTTP 200 or 302"
     fi
-    echo "Waiting for Dokploy to respond... ($i/20)"
+    echo "Waiting for Dokploy to respond... ($i/20) [Current: HTTP $HTTP_CODE]"
     sleep 3
 done
 
 # Docker ports (3000, 80, 443) are managed by Docker directly
 echo "✅ Docker will manage its own ports (3000, 80, 443)"
 
-# --- Save SSH port information (persistent location) ---
+# --- Save SSH port information (persistent location with proper permissions) ---
 echo "$NEW_SSH_PORT" > "$HOME/.ssh_port"
+chmod 600 "$HOME/.ssh_port"
+
+# Save to /tmp with restricted permissions (only owner can read)
 echo "$NEW_SSH_PORT" | sudo tee /tmp/ssh_port_info.txt > /dev/null
 echo "ssh $NEW_USER@<your_ip> -p $NEW_SSH_PORT" | sudo tee /tmp/ssh_connection_command.txt > /dev/null
-sudo chmod 644 /tmp/ssh_port_info.txt /tmp/ssh_connection_command.txt
+sudo chmod 600 /tmp/ssh_port_info.txt /tmp/ssh_connection_command.txt
+sudo chown $NEW_USER:$NEW_USER /tmp/ssh_port_info.txt /tmp/ssh_connection_command.txt
 
 # --- 11. Test SSH Connection Before Removing Default User ---
 echo ""
