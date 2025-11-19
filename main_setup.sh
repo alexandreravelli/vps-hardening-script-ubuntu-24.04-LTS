@@ -318,6 +318,7 @@ fi
 
 # --- 4. Configure Secure DNS (Quad9 with DoT) ---
 if ! check_state "dns_configured"; then
+    show_section "Configuring Secure DNS"
     echo "--- Configuring secure DNS with Quad9 (DNS over TLS)... ---"
     
     # Backup existing resolved.conf

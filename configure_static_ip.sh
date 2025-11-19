@@ -23,11 +23,48 @@ echo -e "${CYAN}"
 echo "╔═══════════════════════════════════════════════════════════════════╗"
 echo "║                                                                   ║"
 echo "║                 🌐  STATIC IP CONFIGURATION  🌐                  ║"
-echo "║                                                                   ║
+echo "║                                                                   ║"
 echo "║           Safe configuration using 'netplan try'                  ║"
 echo "║                                                                   ║"
 echo "╚═══════════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
+
+# Ask if user wants to configure static IP
+echo ""
+echo "Do you want to configure a static IP address?"
+echo ""
+echo -e "${YELLOW}Current configuration:${NC}"
+DEFAULT_IFACE=$(ip route | grep default | awk '{print $5}' | head -n1)
+if [ -n "$DEFAULT_IFACE" ]; then
+    CURRENT_IP=$(ip -4 addr show "$DEFAULT_IFACE" | grep -oP '(?<=inet\s)\d+(\.\d+){3}/\d+' | head -n1)
+    CURRENT_GW=$(ip route | grep default | awk '{print $3}' | head -n1)
+    echo "  Interface: $DEFAULT_IFACE"
+    echo "  IP: $CURRENT_IP"
+    echo "  Gateway: $CURRENT_GW"
+    
+    # Check if using DHCP
+    if grep -q "dhcp4: true" /etc/netplan/*.yaml 2>/dev/null || grep -q "dhcp4: yes" /etc/netplan/*.yaml 2>/dev/null; then
+        echo -e "  Mode: ${CYAN}DHCP (Dynamic)${NC}"
+    else
+        echo -e "  Mode: ${GREEN}Static${NC}"
+    fi
+else
+    echo "  Unable to detect current configuration"
+fi
+
+echo ""
+echo -e "${GRAY}Note: Most VPS providers (OVH, DigitalOcean, etc.) work fine with DHCP.${NC}"
+echo -e "${GRAY}Only configure static IP if required by your provider or network setup.${NC}"
+echo ""
+
+read -p "Configure static IP? (yes/no): " -r
+echo ""
+
+if [[ ! $REPLY =~ ^[Yy]es$ ]]; then
+    echo "Static IP configuration skipped."
+    echo "Your current network configuration will remain unchanged."
+    exit 0
+fi
 
 echo -e "${YELLOW}⚠️  IMPORTANT SAFETY INFORMATION${NC}"
 echo "This script uses 'netplan try'. If you lose connection after applying settings,"
