@@ -16,6 +16,7 @@ chmod +x security_audit.sh
 chmod +x emergency_rollback.sh
 chmod +x check_system_integrity.sh
 chmod +x validate_scripts.sh
+chmod +x remove_default_user.sh
 chmod +x banner.sh
 
 echo "✅ All scripts are now executable!"

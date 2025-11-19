@@ -68,10 +68,13 @@ EOF
     echo -e "  ${BOLD}8.${NC} ✅ Validate Scripts"
     echo -e "     ${GRAY}(Check all scripts for issues)${NC}"
     echo ""
+    echo -e "  ${BOLD}9.${NC} 🗑️  Remove Default User"
+    echo -e "     ${GRAY}(Remove ubuntu user if still present)${NC}"
+    echo ""
     echo -e "  ${BOLD}0.${NC} 🚪 Exit"
     echo ""
     
-    read -p "Enter choice [0-8]: " choice
+    read -p "Enter choice [0-9]: " choice
     
     case $choice in
         1)
@@ -135,6 +138,14 @@ EOF
                 ./validate_scripts.sh
             else
                 echo -e "${RED}Error: validate_scripts.sh not found!${NC}"
+            fi
+            read -p "Press Enter to return to menu..."
+            ;;
+        9)
+            if [ -f "./remove_default_user.sh" ]; then
+                ./remove_default_user.sh
+            else
+                echo -e "${RED}Error: remove_default_user.sh not found!${NC}"
             fi
             read -p "Press Enter to return to menu..."
             ;;

@@ -1013,51 +1013,102 @@ sudo ufw delete allow 22/tcp
 echo "✅ Port 22 disabled, only port $NEW_SSH_PORT is active"
 
 # --- 13. Remove Default User ---
-if getent passwd $DEFAULT_USER > /dev/null; then
-    echo "--- Removing the default user '$DEFAULT_USER'... ---"
+remove_default_user() {
+    local user="$1"
+    local log_file="${2:-/var/log/vps_setup.log}"
     
-    # Create backup of user info before deletion
-    getent passwd $DEFAULT_USER > /tmp/backup_user_info.txt
+    if ! getent passwd "$user" > /dev/null; then
+        log_info "User '$user' doesn't exist (already removed)"
+        return 0
+    fi
     
-    # Aggressively kill processes
-    echo "→ Killing processes for $DEFAULT_USER..."
-    sudo pkill -u $DEFAULT_USER 2>/dev/null || true
+    log_step "Removing default user '$user'..."
+    
+    # Create backup of user info
+    getent passwd "$user" > /tmp/backup_user_info.txt 2>/dev/null || true
+    
+    # Kill all processes
+    log_step "Terminating processes for user '$user'..."
+    sudo pkill -u "$user" 2>/dev/null || true
     sleep 2
     
-    # Check if processes still exist and force kill
-    if pgrep -u $DEFAULT_USER > /dev/null; then
-        echo "  ⚠️  Some processes refused to die, using SIGKILL..."
-        sudo pkill -9 -u $DEFAULT_USER 2>/dev/null || true
+    # Force kill if needed
+    if pgrep -u "$user" > /dev/null; then
+        log_warning "Force killing remaining processes..."
+        sudo pkill -9 -u "$user" 2>/dev/null || true
         sleep 2
     fi
     
-    # Double check
-    if pgrep -u $DEFAULT_USER > /dev/null; then
-        echo "  ❌ CRITICAL: Could not kill all processes for $DEFAULT_USER"
-        ps -u $DEFAULT_USER
-        echo "  Attempting removal anyway..."
+    # Check if processes still running
+    if pgrep -u "$user" > /dev/null; then
+        log_warning "Some processes still running for user '$user'"
+        ps -u "$user" -o pid,cmd | head -5
+        log_warning "Attempting removal anyway..."
     fi
     
-    # Remove user and home directory
-    echo "→ Deleting user and home directory..."
-    # Try standard deluser first
-    if ! sudo deluser --remove-home $DEFAULT_USER 2>/dev/null; then
-        echo "  ⚠️  'deluser' failed, trying 'userdel -f -r'..."
-        # Force remove (files in home, mail spool, etc.)
-        if ! sudo userdel -f -r $DEFAULT_USER 2>/dev/null; then
-             echo "  ❌ Failed to remove user '$DEFAULT_USER'"
+    # Remove user
+    log_step "Deleting user account and home directory..."
+    local removal_success=false
+    
+    # Try deluser first
+    if command -v deluser &> /dev/null; then
+        if sudo deluser --remove-home "$user" 2>&1 | sudo tee -a "$log_file" > /dev/null; then
+            removal_success=true
         fi
     fi
     
-    if ! getent passwd $DEFAULT_USER > /dev/null; then
-        echo "✅ Default user '$DEFAULT_USER' has been removed."
-        echo "$(date): Default user removed successfully" | sudo tee -a "$LOG_FILE"
+    # Fallback to userdel
+    if [ "$removal_success" != "true" ]; then
+        if sudo userdel -r -f "$user" 2>&1 | sudo tee -a "$log_file" > /dev/null; then
+            removal_success=true
+        fi
+    fi
+    
+    # Verify removal
+    if ! getent passwd "$user" > /dev/null; then
+        log_success "User '$user' removed successfully"
+        echo "$(date): Default user '$user' removed successfully" | sudo tee -a "$log_file"
+        
+        # Clean up related files
+        sudo rm -f "/var/mail/$user" 2>/dev/null || true
+        sudo rm -f "/var/spool/cron/crontabs/$user" 2>/dev/null || true
+        
+        return 0
     else
-        echo "⚠️  Warning: Default user still exists but may be disabled"
+        log_error "Failed to remove user '$user'"
+        echo "$(date): Failed to remove user '$user'" | sudo tee -a "$log_file"
+        return 1
+    fi
+}
+
+# Call the function
+if getent passwd $DEFAULT_USER > /dev/null; then
+    spacer
+    show_step_header "13" "10" "Remove Default User"
+    
+    if remove_default_user "$DEFAULT_USER" "$LOG_FILE"; then
+        spacer
+        show_validation_box "User Removal" \
+            "${GREEN}✓${NC} User '$DEFAULT_USER' removed" \
+            "${GREEN}✓${NC} Home directory deleted" \
+            "${GREEN}✓${NC} All processes terminated" \
+            "${GREEN}✓${NC} Related files cleaned up"
+    else
+        spacer
+        show_warning_box "User Removal Failed" \
+            "User '$DEFAULT_USER' could not be removed" \
+            "You can remove it manually later with:" \
+            "  ${CYAN}./remove_default_user.sh${NC}" \
+            "Or:" \
+            "  ${CYAN}sudo deluser --remove-home $DEFAULT_USER${NC}"
     fi
 else
-    echo "--- Default user '$DEFAULT_USER' already removed ---"
+    log_info "Default user '$DEFAULT_USER' already removed"
 fi
+
+spacer
+divider
+spacer
 
 # --- End of script ---
 echo "$(date): VPS setup completed successfully" | sudo tee -a "$LOG_FILE"
