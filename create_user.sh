@@ -244,9 +244,15 @@ echo "→ Copying installation scripts to new user's home directory..."
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIRNAME=$(basename "$SCRIPT_DIR")
 
+echo "  Source: $SCRIPT_DIR"
+echo "  Target: /home/$NEW_USER/$DIRNAME"
+
 if [ -d "$SCRIPT_DIR" ]; then
-    # Copy the entire directory to new user's home
-    if sudo cp -r "$SCRIPT_DIR" "/home/$NEW_USER/"; then
+    # Create target directory first
+    sudo mkdir -p "/home/$NEW_USER/$DIRNAME"
+    
+    # Copy all files from source to target
+    if sudo cp -r "$SCRIPT_DIR"/* "/home/$NEW_USER/$DIRNAME/" 2>/dev/null; then
         # Set proper ownership
         sudo chown -R $NEW_USER:$NEW_USER "/home/$NEW_USER/$DIRNAME"
         
@@ -255,15 +261,29 @@ if [ -d "$SCRIPT_DIR" ]; then
         
         echo "✅ Scripts copied to /home/$NEW_USER/$DIRNAME"
         
+        # Verify the copy
+        if [ -f "/home/$NEW_USER/$DIRNAME/main_setup.sh" ]; then
+            echo "✅ Verified: main_setup.sh is present"
+        else
+            echo "⚠️  Warning: main_setup.sh not found after copy"
+        fi
+        
         # Save the directory name for later use
         echo "$DIRNAME" | sudo tee /tmp/vps_setup_dirname.txt > /dev/null
+        sudo chmod 644 /tmp/vps_setup_dirname.txt
     else
         echo "⚠️  Warning: Could not copy scripts to new user's home"
         echo "You can manually copy them later with:"
         echo "  sudo cp -r $SCRIPT_DIR /home/$NEW_USER/"
+        echo ""
+        echo "Or re-clone the repository:"
+        echo "  cd ~"
+        echo "  git clone https://github.com/alexandreravelli/vps-hardening-script-ubuntu-24.04-LTS.git"
     fi
 else
     echo "⚠️  Warning: Could not determine script directory"
+    echo "Current directory: $(pwd)"
+    echo "Script location: ${BASH_SOURCE[0]}"
 fi
 
 echo ""

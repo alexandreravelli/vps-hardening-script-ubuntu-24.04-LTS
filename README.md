@@ -9,15 +9,24 @@
 
 ## ✨ Features
 
-- **🖥️ Interactive Menu**: Manage everything from a single dashboard.
-- **🔐 Secure User**: Creates a sudo user with SSH keys and removes the default `ubuntu` user.
+### 🎨 **Modern User Experience**
+- **📊 Real-time Progress Bar**: Visual progress with percentage and ETA
+- **📋 Pre-Installation Summary**: See all steps and time estimates before starting
+- **🎯 Post-Installation Dashboard**: Complete status overview with service checks
+- **✅ Step-by-Step Validation**: Automatic verification after each critical step
+- **🎨 Consistent Visual Design**: Color-coded status, clear hierarchy, professional styling
+
+### 🔐 **Security & Hardening**
+- **🖥️ Interactive Menu**: Manage everything from a single dashboard
+- **🔐 Secure User**: Creates a sudo user with SSH keys and removes the default `ubuntu` user
 - **🛡️ Network Hardening**:
-    - **Static IP**: Safe configuration with auto-rollback (`netplan try`).
-    - **DNS Privacy**: Enforces **Quad9** (DoT) and ignores ISP/DHCP DNS.
-    - **Firewall**: UFW configured with strict defaults.
-- **🐳 Docker & Dokploy**: Production-ready Docker setup (log rotation, overlay2) + Dokploy.
-- **🔒 Post-SSL Security**: Automatically locks down port 3000 after SSL setup.
-- **📊 Security Audit**: Comprehensive checkup (SSH, AppArmor, Kernel, DNS).
+    - **Static IP**: Optional safe configuration with auto-rollback (`netplan try`)
+    - **DNS Privacy**: Enforces **Quad9** (DoT) and ignores ISP/DHCP DNS
+    - **Firewall**: UFW configured with strict defaults
+- **🐳 Docker & Dokploy**: Production-ready Docker setup (log rotation, overlay2) + Dokploy
+- **🔒 Post-SSL Security**: Automatically locks down port 3000 after SSL setup
+- **📊 Security Audit**: Comprehensive checkup (SSH, AppArmor, Kernel, DNS)
+- **🔍 System Integrity Check**: Verify critical binaries haven't been tampered with
 
 ## 🚀 Quick Start
 
@@ -50,12 +59,20 @@ cd ~/vps-hardening-script-ubuntu-24.04-LTS
 ./menu.sh
 ```
 
-**This will:**
+**What happens:**
+
+1. **📋 Installation Plan** - Review all steps and estimated time (~15 minutes)
+2. **📊 Progress Tracking** - Real-time progress bar with ETA
+3. **✅ Validation** - Automatic checks after each step
+4. **🎯 Dashboard** - Complete status overview when finished
+
+**This will configure:**
 - Change SSH port to a random high port (50000-59999)
-- Configure UFW firewall
+- Configure UFW firewall with strict rules
 - Install and configure Docker + Dokploy
 - Enable Fail2Ban and automatic security updates
 - Remove the default ubuntu user
+- Set up Quad9 DNS with DNS-over-TLS
 
 ### 2. Reconnect with Your New User
 ```bash
@@ -82,31 +99,89 @@ cd ~/vps-hardening-script-ubuntu-24.04-LTS
 
 ## 📋 Menu Options
 
-1.  **🚀 Run Full Setup**: The standard path for a new server. Handles user creation, firewall, and Docker.
-2.  **👤 Create User Only**: Just want a secure user? Use this.
-3.  **🌐 Configure Network**: Set a **Static IP** and enforce **Quad9 DNS**. Safe to use remotely!
-4.  **🔒 Post-SSL Security**: Run this *after* you've set up your domains in Dokploy to block external access to port 3000.
-5.  **📊 System Health Check**: Run a deep security audit of your system.
-6.  **🐳 Configure Docker**: Optimize Docker daemon settings.
-7.  **🔍 System Integrity Check**: Verify critical binaries haven't been tampered with.
-8.  **✅ Validate Scripts**: Check all scripts for common issues before running.
+Access the interactive menu with: `./menu.sh`
+
+1.  **🚀 Run Full Setup** - Complete server hardening (recommended for new servers)
+    - System update and security tools
+    - Firewall and SSH configuration
+    - Docker and Dokploy installation
+    - Automatic security updates
+    - **Includes:** Progress bar, validation checks, and final dashboard
+
+2.  **👤 Create User Only** - Just create a secure admin user
+    - SSH key authentication
+    - Sudo privileges
+    - Password validation
+
+3.  **🌐 Configure Network** - Optional static IP configuration
+    - Shows current network status (DHCP/Static)
+    - Safe configuration with `netplan try` (auto-rollback)
+    - Quad9 DNS enforcement
+    - **Note:** Most VPS providers work fine with DHCP
+
+4.  **🔒 Post-SSL Security** - Secure port 3000 after SSL setup
+    - Blocks external access to Dokploy port
+    - Keeps localhost access for management
+    - Persistent iptables rules
+
+5.  **📊 System Health Check** - Verify system status
+    - Service status (SSH, Docker, Dokploy, Fail2Ban)
+    - Resource usage (CPU, RAM, Disk)
+    - Network connectivity
+    - DNS configuration
+
+6.  **🐳 Configure Docker** - Optimize Docker settings
+    - Log rotation (10MB max, 3 files)
+    - Storage driver (overlay2)
+    - Swarm-compatible configuration
+
+7.  **🔍 System Integrity Check** - Verify system security
+    - Package integrity (debsums)
+    - SUID binary check
+    - Basic rootkit detection
+    - Kernel module verification
+
+8.  **✅ Validate Scripts** - Pre-deployment checks
+    - Shellcheck integration
+    - Syntax validation
+    - Dangerous pattern detection
+    - Executable permissions
 
 ## 🛡️ Security Details
 
-| Feature | Description |
-| :--- | :--- |
-| **SSH** | Port changed (random 50000+), Root login disabled, Keys only. |
-| **Firewall** | UFW enabled. Default Deny Incoming. Ports 80/443/SSH allowed. |
-| **DNS** | **Quad9** enforced via Netplan & systemd-resolved. DHCP DNS ignored. |
-| **Fail2Ban** | Protects SSH against brute-force attacks. |
-| **Updates** | Unattended-upgrades enabled for security patches. |
-| **Docker** | Daemon hardened, log rotation enabled (10MB max). |
+| Feature | Description | Status |
+| :--- | :--- | :---: |
+| **SSH** | Port changed (random 50000+), Root login disabled, Keys only | ✅ |
+| **Firewall** | UFW enabled. Default Deny Incoming. Ports 80/443/SSH allowed | ✅ |
+| **DNS** | **Quad9** enforced via Netplan & systemd-resolved. DHCP DNS ignored | ✅ |
+| **Fail2Ban** | Protects SSH against brute-force attacks (24h ban) | ✅ |
+| **Updates** | Unattended-upgrades enabled for security patches | ✅ |
+| **Docker** | Daemon hardened, log rotation enabled (10MB max, 3 files) | ✅ |
+| **Validation** | Automatic checks after each critical step | ✅ |
+| **Integrity** | System integrity verification available | ✅ |
 
 ## ⚠️ Important Notes
 
-- **Static IP**: The script uses `netplan try`. If you lose connection, **WAIT 120 SECONDS**. It will automatically revert changes.
-- **Port 3000**: Initially open for Dokploy setup. Use option #4 to close it once SSL is active.
-- **User Deletion**: The script aggressively removes the default `ubuntu` user for security. Ensure you test your new user connection first!
+### 🔒 Security
+- **SSH Port Change**: Port 22 is disabled after setup. Save your new SSH port!
+- **User Deletion**: The default `ubuntu` user is removed for security. Test your new user connection first!
+- **Port 3000**: Initially open for Dokploy setup. Run `./post_ssl_setup.sh` after SSL configuration.
+
+### 🌐 Network
+- **Static IP**: Optional. Most VPS providers work fine with DHCP.
+- **Netplan Safety**: Uses `netplan try` with 120-second auto-rollback if you lose connection.
+- **DNS**: Quad9 DNS-over-TLS is enforced, ignoring DHCP/ISP DNS.
+
+### 📊 Monitoring
+- **Progress Bar**: Shows real-time progress with ETA during installation
+- **Validation**: Automatic checks verify each step completed successfully
+- **Dashboard**: Final status overview shows all service states
+- **Logs**: Everything logged to `/var/log/vps_setup.log`
+
+### 🔄 Recovery
+- **State Management**: Installation can resume from last successful step
+- **Rollback**: Automatic rollback on critical errors
+- **Emergency Script**: `./emergency_rollback.sh` for disaster recovery
 
 ## 🤝 Contributing
 
