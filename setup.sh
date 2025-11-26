@@ -120,6 +120,20 @@ step "Step 4/8: Install security tools"
 sudo apt-get install -y -qq ufw fail2ban
 log "UFW and Fail2Ban installed"
 
+# Configure Fail2Ban for custom SSH port
+sudo tee /etc/fail2ban/jail.local > /dev/null << EOF
+[sshd]
+enabled = true
+port = 22,$SSH_PORT
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 3
+bantime = 3600
+findtime = 600
+EOF
+sudo systemctl restart fail2ban
+log "Fail2Ban configured for ports 22 and $SSH_PORT"
+
 # === STEP 5: CONFIGURE FIREWALL ===
 step "Step 5/8: Configure firewall"
 
@@ -140,18 +154,18 @@ step "Step 6/8: Configure SSH"
 # Backup
 sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
 
-# Configure SSH
+# Configure SSH - KEEP PASSWORD AUTH FOR NOW (will disable after test)
 sudo tee /etc/ssh/sshd_config.d/hardening.conf > /dev/null << EOF
 Port 22
 Port $SSH_PORT
 PermitRootLogin no
-PasswordAuthentication no
+PasswordAuthentication yes
 PubkeyAuthentication yes
 EOF
 
 # Restart SSH
 sudo systemctl restart ssh
-log "SSH configured (ports: 22 and $SSH_PORT)"
+log "SSH configured (ports: 22 and $SSH_PORT, password auth still enabled)"
 
 # === STEP 7: INSTALL DOCKER ===
 step "Step 7/8: Install Docker"
@@ -209,14 +223,37 @@ echo ""
 read -p "Did SSH work? (yes/no): " SSH_TEST
 
 if [ "$SSH_TEST" != "yes" ]; then
-    warn "SSH test failed - keeping port 22 open"
-    warn "Fix the issue and run: sudo ufw delete allow 22/tcp"
+    warn "SSH test failed - keeping port 22 and password auth open"
+    warn "Fix the issue, then run:"
+    warn "  sudo sed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config.d/hardening.conf"
+    warn "  sudo sed -i '/^Port 22$/d' /etc/ssh/sshd_config.d/hardening.conf"
+    warn "  sudo systemctl restart ssh"
+    warn "  sudo ufw delete allow 22/tcp"
 else
-    # Close port 22
-    sudo sed -i '/^Port 22$/d' /etc/ssh/sshd_config.d/hardening.conf
+    # Close port 22 AND disable password auth
+    sudo tee /etc/ssh/sshd_config.d/hardening.conf > /dev/null << EOF
+Port $SSH_PORT
+PermitRootLogin no
+PasswordAuthentication no
+PubkeyAuthentication yes
+EOF
     sudo systemctl restart ssh
     sudo ufw delete allow 22/tcp
-    log "Port 22 closed - only port $SSH_PORT is active"
+    
+    # Update Fail2Ban for final port only
+    sudo tee /etc/fail2ban/jail.local > /dev/null << EOF
+[sshd]
+enabled = true
+port = $SSH_PORT
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 3
+bantime = 3600
+findtime = 600
+EOF
+    sudo systemctl restart fail2ban
+    
+    log "Security hardened: Port 22 closed, password auth disabled"
 fi
 
 # === STEP 9: REMOVE OLD USER ===
@@ -240,34 +277,45 @@ else
     echo "WARNING: Make sure you can login with '$NEW_USER' before removing!"
     echo ""
     
-    read -p "Remove user '$OLD_USER'? (yes/no): " REMOVE_USER
-    
-    if [ "$REMOVE_USER" = "yes" ]; then
-        echo "Removing user '$OLD_USER'..."
-        
-        # Kill all processes (except current session)
-        sudo pkill -9 -u $OLD_USER 2>/dev/null || true
-        sleep 2
-        
-        # Remove user
-        if sudo deluser --remove-home $OLD_USER 2>/dev/null; then
-            log "User '$OLD_USER' removed with deluser"
-        elif sudo userdel -r -f $OLD_USER 2>/dev/null; then
-            log "User '$OLD_USER' removed with userdel"
-        else
-            warn "Could not remove '$OLD_USER' automatically"
-            echo "Try manually: sudo userdel -r -f $OLD_USER"
-        fi
-        
-        # Verify
-        if ! id "$OLD_USER" &>/dev/null; then
-            log "Verified: '$OLD_USER' no longer exists"
-        else
-            warn "User '$OLD_USER' still exists - remove manually"
-        fi
+    # Check if we're running as the user we want to delete (dangerous!)
+    if [ "$OLD_USER" = "$(whoami)" ]; then
+        warn "Cannot auto-remove '$OLD_USER' - you're currently logged in as this user!"
+        echo ""
+        echo "To remove this user safely:"
+        echo "  1. Disconnect from this session"
+        echo "  2. Login as '$NEW_USER': ssh $NEW_USER@\$(curl -s ifconfig.me) -p $SSH_PORT"
+        echo "  3. Run: sudo deluser --remove-home $OLD_USER"
+        echo ""
     else
-        warn "User '$OLD_USER' NOT removed"
-        echo "You can remove it later with: sudo deluser --remove-home $OLD_USER"
+        read -p "Remove user '$OLD_USER'? (yes/no): " REMOVE_USER
+        
+        if [ "$REMOVE_USER" = "yes" ]; then
+            echo "Removing user '$OLD_USER'..."
+            
+            # Kill all processes for that user
+            sudo pkill -9 -u $OLD_USER 2>/dev/null || true
+            sleep 2
+            
+            # Remove user
+            if sudo deluser --remove-home $OLD_USER 2>/dev/null; then
+                log "User '$OLD_USER' removed with deluser"
+            elif sudo userdel -r -f $OLD_USER 2>/dev/null; then
+                log "User '$OLD_USER' removed with userdel"
+            else
+                warn "Could not remove '$OLD_USER' automatically"
+                echo "Try manually: sudo userdel -r -f $OLD_USER"
+            fi
+            
+            # Verify
+            if ! id "$OLD_USER" &>/dev/null; then
+                log "Verified: '$OLD_USER' no longer exists"
+            else
+                warn "User '$OLD_USER' still exists - remove manually"
+            fi
+        else
+            warn "User '$OLD_USER' NOT removed"
+            echo "You can remove it later with: sudo deluser --remove-home $OLD_USER"
+        fi
     fi
 fi
 
