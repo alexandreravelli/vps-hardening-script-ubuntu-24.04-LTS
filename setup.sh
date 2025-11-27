@@ -136,8 +136,39 @@ fi
 # === STEP 4: INSTALL SECURITY TOOLS ===
 step "Step 4/8: Install security tools"
 
-sudo apt-get install -y -qq ufw fail2ban unattended-upgrades
-log "UFW, Fail2Ban and unattended-upgrades installed"
+sudo apt-get install -y -qq ufw fail2ban unattended-upgrades libpam-pwquality auditd
+log "UFW, Fail2Ban, unattended-upgrades, pwquality and auditd installed"
+
+# Configure strong password policy
+sudo tee /etc/security/pwquality.conf > /dev/null << EOF
+minlen = 12
+dcredit = -1
+ucredit = -1
+lcredit = -1
+ocredit = -1
+reject_username
+enforce_for_root
+EOF
+log "Strong password policy configured (min 12 chars, mixed case, numbers, symbols)"
+
+# Configure audit logging
+sudo tee /etc/audit/rules.d/hardening.rules > /dev/null << EOF
+# Log all sudo commands
+-a always,exit -F arch=b64 -S execve -F euid=0 -k sudo_commands
+# Log authentication events
+-w /var/log/auth.log -p wa -k auth_log
+# Log SSH config changes
+-w /etc/ssh/sshd_config -p wa -k sshd_config
+# Log user/group changes
+-w /etc/passwd -p wa -k passwd_changes
+-w /etc/shadow -p wa -k shadow_changes
+-w /etc/group -p wa -k group_changes
+# Log network config changes
+-w /etc/hosts -p wa -k hosts_changes
+-w /etc/network -p wa -k network_changes
+EOF
+sudo systemctl restart auditd
+log "Audit logging configured (sudo, auth, SSH, user changes)"
 
 # Configure automatic security updates
 sudo tee /etc/apt/apt.conf.d/50unattended-upgrades > /dev/null << EOF
