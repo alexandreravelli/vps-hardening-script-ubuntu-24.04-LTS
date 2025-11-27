@@ -34,6 +34,7 @@ The script runs 9 steps interactively:
 | SSH | Random port (50000-60000), root disabled, key-only auth |
 | Firewall | UFW with deny-by-default, only SSH/80/443/3000 open |
 | Fail2Ban | Protects SSH (3 attempts, 1h ban) |
+| Auto-updates | Security patches applied daily via unattended-upgrades |
 | Docker | Log rotation (10MB max, 3 files) |
 
 ## Safety Measures
