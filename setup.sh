@@ -117,8 +117,28 @@ log "System updated"
 # === STEP 4: INSTALL SECURITY TOOLS ===
 step "Step 4/8: Install security tools"
 
-sudo apt-get install -y -qq ufw fail2ban
-log "UFW and Fail2Ban installed"
+sudo apt-get install -y -qq ufw fail2ban unattended-upgrades
+log "UFW, Fail2Ban and unattended-upgrades installed"
+
+# Configure automatic security updates
+sudo tee /etc/apt/apt.conf.d/50unattended-upgrades > /dev/null << EOF
+Unattended-Upgrade::Allowed-Origins {
+    "\${distro_id}:\${distro_codename}-security";
+    "\${distro_id}ESMApps:\${distro_codename}-apps-security";
+    "\${distro_id}ESM:\${distro_codename}-infra-security";
+};
+Unattended-Upgrade::AutoFixInterruptedDpkg "true";
+Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+Unattended-Upgrade::Remove-Unused-Dependencies "true";
+Unattended-Upgrade::Automatic-Reboot "false";
+EOF
+
+sudo tee /etc/apt/apt.conf.d/20auto-upgrades > /dev/null << EOF
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+APT::Periodic::AutocleanInterval "7";
+EOF
+log "Automatic security updates enabled"
 
 # Configure Fail2Ban for custom SSH port
 sudo tee /etc/fail2ban/jail.local > /dev/null << EOF
