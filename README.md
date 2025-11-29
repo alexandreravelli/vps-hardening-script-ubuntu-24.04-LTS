@@ -41,7 +41,7 @@ The script runs 9 steps interactively:
 | Auto-updates | Security patches applied daily via unattended-upgrades |
 | Timezone | UTC (consistent logs) |
 | Swap | 2GB swap file (prevents OOM kills) |
-| DNS | Quad9 with DNS-over-TLS (privacy + security) |
+| DNS | Quad9 (9.9.9.9) with DNS-over-TLS + DNSSEC + fallback |
 | Docker | Log rotation (10MB max, 3 files) |
 
 ## Safety Measures
