@@ -261,6 +261,11 @@ step "Step 6/8: Configure SSH"
 # Backup
 sudo cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
 
+# Disable systemd socket activation (forces port 22, ignores config)
+sudo systemctl disable --now ssh.socket 2>/dev/null || true
+sudo systemctl enable ssh.service
+log "SSH socket disabled, using direct service"
+
 # Configure SSH - KEEP PASSWORD AUTH FOR NOW (will disable after test)
 sudo tee /etc/ssh/sshd_config.d/hardening.conf > /dev/null << EOF
 Port 22
