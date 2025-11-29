@@ -9,6 +9,11 @@ set -e
 CURRENT_USER=$(whoami)
 SSH_PORT=$((RANDOM % 10000 + 50000))
 LOG_FILE="/var/log/vps_setup.log"
+CONFIG_FILE="/root/.vps_hardening_config"
+
+# Save SSH port for recovery
+echo "SSH_PORT=$SSH_PORT" | sudo tee $CONFIG_FILE > /dev/null
+sudo chmod 600 $CONFIG_FILE
 
 # === COLORS (minimal) ===
 RED='\033[0;31m'
@@ -132,8 +137,10 @@ if [ ! -f /swapfile ]; then
     sudo swapon /swapfile
     echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab > /dev/null
     # Optimize swap usage
-    echo 'vm.swappiness=10' | sudo tee -a /etc/sysctl.conf > /dev/null
-    sudo sysctl -p > /dev/null
+    if ! grep -q "vm.swappiness" /etc/sysctl.conf; then
+        echo 'vm.swappiness=10' | sudo tee -a /etc/sysctl.conf > /dev/null
+        sudo sysctl -p > /dev/null
+    fi
     log "Swap configured (2GB, swappiness=10)"
 else
     log "Swap already exists"
@@ -421,6 +428,8 @@ echo "=============================================="
 echo ""
 echo "SSH:     ssh $NEW_USER@$PUBLIC_IP -p $SSH_PORT"
 echo "Dokploy: http://$PUBLIC_IP:3000"
+echo ""
+echo "IMPORTANT: SSH port saved in $CONFIG_FILE"
 echo ""
 echo "Next steps:"
 echo "  1. Access Dokploy and create admin account"
