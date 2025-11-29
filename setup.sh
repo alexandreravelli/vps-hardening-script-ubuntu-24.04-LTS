@@ -146,6 +146,18 @@ else
     log "Swap already exists"
 fi
 
+# Configure Quad9 DNS with DNS-over-TLS
+sudo mkdir -p /etc/systemd/resolved.conf.d
+sudo tee /etc/systemd/resolved.conf.d/quad9.conf > /dev/null << EOF
+[Resolve]
+DNS=9.9.9.9 149.112.112.112 2620:fe::fe 2620:fe::9
+FallbackDNS=1.1.1.1 1.0.0.1
+DNSOverTLS=yes
+DNSSEC=yes
+EOF
+sudo systemctl restart systemd-resolved
+log "Quad9 DNS configured with DNS-over-TLS"
+
 # === STEP 4: INSTALL SECURITY TOOLS ===
 step "Step 4/8: Install security tools"
 
